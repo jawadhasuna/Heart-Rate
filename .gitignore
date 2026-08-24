@@ -1,0 +1,10 @@
+# The MIT-BIH data — 100+ MB, downloaded from PhysioNet, not ours to redistribute.
+data/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Local editor / tooling settings
+.claude/

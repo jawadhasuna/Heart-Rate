@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Heart Rate</title>
+<link rel="icon" href="assets/logo.svg">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <img src="assets/logo.svg" alt="" class="logo">
+    <h1>Heart Rate</h1>
+  </div>
+  <span class="badge" id="record-badge">no record loaded</span>
+</header>
+
+<main>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Choose a recording</h2>
+    </div>
+    <div class="picker">
+      <select id="record-select" aria-label="Recording">
+        <option value="">Select a record…</option>
+        <option value="100">Record 100 — mostly normal rhythm</option>
+        <option value="208">Record 208 — frequent early beats</option>
+        <option value="203">Record 203 — irregular throughout</option>
+      </select>
+      <button id="analyze-btn" type="button">Analyze</button>
+    </div>
+    <p class="hint" id="picker-hint">Demo data for now — the real model isn't wired up yet.</p>
+  </section>
+
+  <section class="panel" id="trace-panel" hidden>
+    <div class="panel-head">
+      <h2>Heartbeat trace</h2>
+      <span class="legend"><i class="dot"></i> flagged as abnormal</span>
+    </div>
+    <canvas id="trace" height="200"></canvas>
+    <div class="scrubber">
+      <label for="offset">Position in recording</label>
+      <input type="range" id="offset" min="0" max="100" value="0" step="1">
+      <span id="offset-out">0:00</span>
+    </div>
+  </section>
+
+  <section class="stats" id="stats" hidden>
+    <div class="stat">
+      <p class="stat-label">Beats found</p>
+      <p class="stat-value" id="stat-total">—</p>
+    </div>
+    <div class="stat">
+      <p class="stat-label">Look abnormal</p>
+      <p class="stat-value danger" id="stat-abnormal">—</p>
+    </div>
+    <div class="stat">
+      <p class="stat-label">Confidence</p>
+      <p class="stat-value" id="stat-confidence">—</p>
+    </div>
+  </section>
+
+  <section class="panel" id="summary-panel" hidden>
+    <div class="panel-head">
+      <h2>Plain-language summary</h2>
+    </div>
+    <p class="summary" id="summary">—</p>
+  </section>
+
+  <p class="disclaimer">
+    A learning project, not a medical device. Nothing here is a diagnosis.
+  </p>
+
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

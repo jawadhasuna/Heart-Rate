@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <mask id="cut">
+    <rect width="100" height="100" fill="black"/>
+    <path fill="white" d="M50 88 C50 88 8 60 8 34 C8 19 19 10 31 10 C40 10 47 15 50 21 C53 15 60 10 69 10 C81 10 92 19 92 34 C92 60 50 88 50 88 Z"/>
+    <polyline fill="none" stroke="black" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"
+      points="4,52 34,52 40,38 48,70 56,30 62,52 96,52"/>
+  </mask>
+  <rect width="100" height="100" fill="#E03131" mask="url(#cut)"/>
+</svg>
