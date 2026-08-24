@@ -9,7 +9,6 @@ __pycache__/
 # Local editor / tooling settings
 .claude/
 
-# Trained model and built dataset (regenerate with build_dataset.py / train.py)
+# The dataset is 69 MB and rebuildable; the trained model is 196 KB and ships.
 beats.npz
-model.pt
 record_*.png
