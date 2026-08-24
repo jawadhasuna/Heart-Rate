@@ -114,26 +114,32 @@ def collect(record_names, group):
     return X, T, y, src
 
 
-print(f"cutting {WINDOW}-sample windows ({BEFORE} before the peak, {AFTER} after)\n")
+def main():
+    print(f"cutting {WINDOW}-sample windows ({BEFORE} before the peak, {AFTER} after)\n")
 
-print("training patients")
-X_train, T_train, y_train, src_train = collect(TRAIN_RECORDS, "train")
+    print("training patients")
+    X_train, T_train, y_train, src_train = collect(TRAIN_RECORDS, "train")
 
-print("testing patients (never seen during training)")
-X_test, T_test, y_test, src_test = collect(TEST_RECORDS, "test")
+    print("testing patients (never seen during training)")
+    X_test, T_test, y_test, src_test = collect(TEST_RECORDS, "test")
 
-np.savez_compressed(
-    "beats.npz",
-    X_train=X_train, T_train=T_train, y_train=y_train, src_train=src_train,
-    X_test=X_test, T_test=T_test, y_test=y_test, src_test=src_test,
-    classes=np.array(CLASSES),
-)
+    np.savez_compressed(
+        "beats.npz",
+        X_train=X_train, T_train=T_train, y_train=y_train, src_train=src_train,
+        X_test=X_test, T_test=T_test, y_test=y_test, src_test=src_test,
+        classes=np.array(CLASSES),
+    )
 
-print("what's in each class")
-print(f"  {'':4} {'train':>9} {'test':>9}   ")
-for i, cls in enumerate(CLASSES):
-    n_tr, n_te = int((y_train == i).sum()), int((y_test == i).sum())
-    pct = 100 * n_tr / len(y_train)
-    print(f"  {cls:4} {n_tr:9,} {n_te:9,}   {pct:5.2f}%  {CLASS_NAMES[cls]}")
+    print("what's in each class")
+    print(f"  {'':4} {'train':>9} {'test':>9}   ")
+    for i, cls in enumerate(CLASSES):
+        n_tr, n_te = int((y_train == i).sum()), int((y_test == i).sum())
+        pct = 100 * n_tr / len(y_train)
+        print(f"  {cls:4} {n_tr:9,} {n_te:9,}   {pct:5.2f}%  {CLASS_NAMES[cls]}")
 
-print(f"\nwrote beats.npz  ({X_train.shape[0]:,} train / {X_test.shape[0]:,} test)")
+    print(f"\nwrote beats.npz  ({X_train.shape[0]:,} train / {X_test.shape[0]:,} test)")
+
+
+
+if __name__ == "__main__":
+    main()

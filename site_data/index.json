@@ -1,0 +1,126 @@
+{
+ "records": [
+  {
+   "record": "100",
+   "minutes": 30.1,
+   "total": 2271,
+   "abnormalTrue": 34,
+   "caught": 33,
+   "recall": 0.9706,
+   "agreement": 0.9991
+  },
+  {
+   "record": "105",
+   "minutes": 30.1,
+   "total": 2571,
+   "abnormalTrue": 46,
+   "caught": 45,
+   "recall": 0.9783,
+   "agreement": 0.9537
+  },
+  {
+   "record": "200",
+   "minutes": 30.1,
+   "total": 2600,
+   "abnormalTrue": 858,
+   "caught": 808,
+   "recall": 0.9417,
+   "agreement": 0.9588
+  },
+  {
+   "record": "202",
+   "minutes": 30.1,
+   "total": 2135,
+   "abnormalTrue": 75,
+   "caught": 66,
+   "recall": 0.88,
+   "agreement": 0.9007
+  },
+  {
+   "record": "210",
+   "minutes": 30.1,
+   "total": 2648,
+   "abnormalTrue": 227,
+   "caught": 160,
+   "recall": 0.7048,
+   "agreement": 0.9532
+  },
+  {
+   "record": "213",
+   "minutes": 30.1,
+   "total": 3248,
+   "abnormalTrue": 610,
+   "caught": 336,
+   "recall": 0.5508,
+   "agreement": 0.8454
+  },
+  {
+   "record": "214",
+   "minutes": 30.1,
+   "total": 2260,
+   "abnormalTrue": 259,
+   "caught": 250,
+   "recall": 0.9653,
+   "agreement": 0.8496
+  },
+  {
+   "record": "219",
+   "minutes": 30.1,
+   "total": 2153,
+   "abnormalTrue": 72,
+   "caught": 66,
+   "recall": 0.9167,
+   "agreement": 0.836
+  },
+  {
+   "record": "221",
+   "minutes": 30.1,
+   "total": 2426,
+   "abnormalTrue": 396,
+   "caught": 396,
+   "recall": 1.0,
+   "agreement": 0.9563
+  },
+  {
+   "record": "228",
+   "minutes": 30.1,
+   "total": 2052,
+   "abnormalTrue": 365,
+   "caught": 364,
+   "recall": 0.9973,
+   "agreement": 0.9712
+  },
+  {
+   "record": "232",
+   "minutes": 30.1,
+   "total": 1779,
+   "abnormalTrue": 1381,
+   "caught": 291,
+   "recall": 0.2107,
+   "agreement": 0.3744
+  },
+  {
+   "record": "233",
+   "minutes": 30.1,
+   "total": 3077,
+   "abnormalTrue": 848,
+   "caught": 838,
+   "recall": 0.9882,
+   "agreement": 0.949
+  }
+ ],
+ "classes": [
+  "N",
+  "S",
+  "V",
+  "F",
+  "Q"
+ ],
+ "classNames": {
+  "N": "normal",
+  "S": "early, from the upper chambers",
+  "V": "early, from the lower chambers",
+  "F": "a fusion of normal and ventricular",
+  "Q": "unclassifiable or paced"
+ }
+}

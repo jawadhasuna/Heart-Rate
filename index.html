@@ -25,41 +25,49 @@
     </div>
     <div class="picker">
       <select id="record-select" aria-label="Recording">
-        <option value="">Select a record…</option>
-        <option value="100">Record 100 — mostly normal rhythm</option>
-        <option value="208">Record 208 — frequent early beats</option>
-        <option value="203">Record 203 — irregular throughout</option>
+        <option value="">Loading…</option>
       </select>
       <button id="analyze-btn" type="button">Analyze</button>
     </div>
-    <p class="hint" id="picker-hint">Demo data for now — the real model isn't wired up yet.</p>
+    <p class="hint" id="picker-hint">
+      Real ECG from the MIT-BIH database. Every patient here is one the model
+      never saw while training.
+    </p>
   </section>
 
   <section class="panel" id="trace-panel" hidden>
     <div class="panel-head">
       <h2>Heartbeat trace</h2>
-      <span class="legend"><i class="dot"></i> flagged as abnormal</span>
+      <div class="legend">
+        <span><i class="dot caught"></i> caught</span>
+        <span><i class="dot missed"></i> missed</span>
+        <span><i class="dot false"></i> false alarm</span>
+      </div>
     </div>
-    <canvas id="trace" height="200"></canvas>
+    <canvas id="trace" height="220"></canvas>
     <div class="scrubber">
-      <label for="offset">Position in recording</label>
-      <input type="range" id="offset" min="0" max="100" value="0" step="1">
+      <label for="offset">Position</label>
+      <input type="range" id="offset" min="0" max="1000" value="0" step="1">
       <span id="offset-out">0:00</span>
     </div>
   </section>
 
   <section class="stats" id="stats" hidden>
     <div class="stat">
-      <p class="stat-label">Beats found</p>
+      <p class="stat-label">Beats analyzed</p>
       <p class="stat-value" id="stat-total">—</p>
     </div>
     <div class="stat">
-      <p class="stat-label">Look abnormal</p>
-      <p class="stat-value danger" id="stat-abnormal">—</p>
+      <p class="stat-label">Model flagged</p>
+      <p class="stat-value danger" id="stat-flagged">—</p>
     </div>
     <div class="stat">
-      <p class="stat-label">Confidence</p>
-      <p class="stat-value" id="stat-confidence">—</p>
+      <p class="stat-label">Actually abnormal</p>
+      <p class="stat-value" id="stat-truth">—</p>
+    </div>
+    <div class="stat">
+      <p class="stat-label">Of those, caught</p>
+      <p class="stat-value" id="stat-caught">—</p>
     </div>
   </section>
 
@@ -68,6 +76,7 @@
       <h2>Plain-language summary</h2>
     </div>
     <p class="summary" id="summary">—</p>
+    <p class="summary-note" id="summary-note"></p>
   </section>
 
   <p class="disclaimer">

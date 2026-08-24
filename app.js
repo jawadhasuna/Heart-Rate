@@ -1,61 +1,70 @@
-/* Heart Rate — heartbeat ECG analyzer (layout stage)
+/* Heart Rate — heartbeat ECG analyzer
  *
- * Everything below is DEMO data. When the real model is trained, the only
- * thing that changes is where `beats` and `stats` come from: instead of
- * being made up here, they'll be fetched from the Python side.
+ * Every number on this page is real. The waveforms are ECG recordings from
+ * the MIT-BIH Arrhythmia Database, the verdicts come from the trained model
+ * in model.pt, and the "actually abnormal" counts are what the cardiologists
+ * wrote down in the 1970s. Nothing here is simulated.
+ *
+ * The heavy lifting happened in precompute.py — the browser just draws the
+ * results it wrote into site_data/.
  */
 
-const RECORDS = {
-  "100": {
-    total: 2273, abnormalRate: 0.01, confidence: 99,
-    summary: "This recording is steady almost the whole way through. A handful of early beats turn up, but they're scattered and infrequent — nothing that forms a pattern."
-  },
-  "208": {
-    total: 2955, abnormalRate: 0.19, confidence: 98,
-    summary: "This recording shows a mostly steady rhythm with frequent early beats — about 1 in every 5. They cluster toward the end of the recording rather than spreading evenly across it."
-  },
-  "203": {
-    total: 2980, abnormalRate: 0.31, confidence: 94,
-    summary: "The rhythm here is irregular throughout, with abnormal beats appearing in bursts rather than isolated. The signal is also noisier than most, so these numbers are less certain."
-  }
-};
-
-const BEATS_ON_SCREEN = 8;
-const RECORDING_SECONDS = 30 * 60;
-
-let beats = [];          // one entry per beat: { abnormal: true/false }
-let current = null;      // the record we're showing
-
-/* ---------- elements ---------- */
+const DATA = "site_data";
+const SECONDS_ON_SCREEN = 6;
 
 const $ = (id) => document.getElementById(id);
 const canvas = $("trace");
 const ctx = canvas.getContext("2d");
 
-/* ---------- demo data ---------- */
+let index = null;      // the list of available records
+let current = null;    // the record being shown: beats, counts, scores
+let wave = null;       // its waveform, as an Int16Array
 
-// A tiny predictable random generator, so the same record always looks
-// the same instead of reshuffling every time you move the slider.
-function seededRandom(seed) {
-  let s = seed;
-  return () => {
-    s = (s * 1103515245 + 12345) % 2147483648;
-    return s / 2147483648;
-  };
-}
+/* ---------- loading ---------- */
 
-function makeBeats(record, seed) {
-  const rand = seededRandom(seed);
-  const out = [];
-  for (let i = 0; i < record.total; i++) {
-    // Later in the recording, abnormal beats get more likely — this is
-    // what makes the "they cluster toward the end" summary line true.
-    const position = i / record.total;
-    const chance = record.abnormalRate * (0.4 + 1.2 * position);
-    out.push({ abnormal: rand() < chance });
+async function loadIndex() {
+  index = await (await fetch(`${DATA}/index.json`)).json();
+  const select = $("record-select");
+  select.innerHTML = '<option value="">Select a record…</option>';
+  for (const rec of index.records) {
+    const option = document.createElement("option");
+    option.value = rec.record;
+    option.textContent =
+      `Record ${rec.record} — ${rec.abnormalTrue.toLocaleString()} abnormal beats, ` +
+      `${Math.round(rec.recall * 100)}% caught`;
+    select.appendChild(option);
   }
-  return out;
 }
+
+async function loadRecord(name) {
+  const [info, buffer] = await Promise.all([
+    fetch(`${DATA}/${name}.json`).then((r) => r.json()),
+    fetch(`${DATA}/${name}.bin`).then((r) => r.arrayBuffer()),
+  ]);
+  current = info;
+  wave = new Int16Array(buffer);
+}
+
+/* ---------- what happened to each beat ---------- */
+
+// Because we have the cardiologists' labels as well as the model's guess, we
+// can show not just what the model claimed but whether it was right. That
+// honesty is the point of the page.
+function verdict(beat) {
+  const modelSaysAbnormal = beat.said !== 0;
+  const reallyAbnormal = beat.true !== 0;
+  if (modelSaysAbnormal && reallyAbnormal) return "caught";
+  if (!modelSaysAbnormal && reallyAbnormal) return "missed";
+  if (modelSaysAbnormal && !reallyAbnormal) return "false";
+  return "normal";
+}
+
+const COLOR = {
+  caught: "#E03131",     // flagged, and it really was abnormal
+  missed: "#F59F00",     // abnormal, and the model walked straight past it
+  false: "#4C6EF5",      // flagged, but the beat was fine
+  normal: null,          // nothing drawn
+};
 
 /* ---------- drawing ---------- */
 
@@ -63,18 +72,11 @@ function css(name) {
   return getComputedStyle(document.body).getPropertyValue(name).trim();
 }
 
-// One heartbeat, drawn as a list of [x, y] points across a 0..1 width.
-// A normal beat has a small bump, a tall spike, then a rounded wave.
-// An abnormal beat is wider and lurches the other way — that's roughly
-// what a premature ventricular beat looks like on a real strip.
-function beatShape(abnormal) {
-  return abnormal
-    ? [[0,.5],[.18,.5],[.28,.30],[.42,1.0],[.55,.05],[.68,.62],[.82,.5],[1,.5]]
-    : [[0,.5],[.14,.5],[.20,.43],[.26,.5],[.42,.5],[.46,.44],[.50,.10],[.54,.86],[.58,.5],[.72,.5],[.80,.38],[.88,.5],[1,.5]];
+function windowSize() {
+  return Math.round(SECONDS_ON_SCREEN * current.hz);
 }
 
-function draw(startBeat) {
-  // Match the canvas to its on-screen size so the line isn't blurry.
+function draw(startSample) {
   const ratio = window.devicePixelRatio || 1;
   const width = canvas.clientWidth;
   const height = canvas.clientHeight;
@@ -83,81 +85,165 @@ function draw(startBeat) {
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
   ctx.clearRect(0, 0, width, height);
 
-  const slice = beats.slice(startBeat, startBeat + BEATS_ON_SCREEN);
-  if (!slice.length) return;
+  const span = windowSize();
+  const end = Math.min(startSample + span, wave.length);
+  const pad = 26;
+  const usable = height - pad * 2;
 
-  const beatWidth = width / BEATS_ON_SCREEN;
-  const top = 20;
-  const usable = height - top * 2;
+  // Scale the visible slice to fill the box. The signal's range varies a lot
+  // between patients and even within one recording, so fitting to what is
+  // actually on screen beats a fixed scale.
+  let low = Infinity, high = -Infinity;
+  for (let i = startSample; i < end; i++) {
+    if (wave[i] < low) low = wave[i];
+    if (wave[i] > high) high = wave[i];
+  }
+  const range = Math.max(high - low, 1);
+  const yAt = (v) => pad + (1 - (v - low) / range) * usable;
+  const xAt = (i) => ((i - startSample) / span) * width;
 
-  // Highlight blocks behind the abnormal beats.
-  ctx.fillStyle = "rgba(224, 49, 49, 0.20)";
-  slice.forEach((beat, i) => {
-    if (!beat.abnormal) return;
-    const x = i * beatWidth + beatWidth * 0.12;
+  // Highlight blocks behind flagged beats, drawn first so the trace sits on top.
+  for (const beat of current.beats) {
+    if (beat.at < startSample || beat.at >= end) continue;
+    const kind = verdict(beat);
+    if (kind === "normal") continue;
+    const x = xAt(beat.at);
+    const w = Math.max((width / span) * current.hz * 0.22, 10);
+    ctx.fillStyle = COLOR[kind] + "33";
     ctx.beginPath();
-    ctx.roundRect(x, 6, beatWidth * 0.76, height - 12, 6);
+    ctx.roundRect(x - w / 2, 6, w, height - 12, 5);
     ctx.fill();
-  });
+  }
 
-  // The trace itself, drawn as one continuous line.
   ctx.strokeStyle = css("--text-dim");
-  ctx.lineWidth = 1.6;
+  ctx.lineWidth = 1.3;
   ctx.lineJoin = "round";
-  ctx.lineCap = "round";
   ctx.beginPath();
-  slice.forEach((beat, i) => {
-    beatShape(beat.abnormal).forEach(([px, py], j) => {
-      const x = (i + px) * beatWidth;
-      const y = top + (1 - py) * usable;
-      if (i === 0 && j === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    });
-  });
+  for (let i = startSample; i < end; i++) {
+    const x = xAt(i), y = yAt(wave[i]);
+    if (i === startSample) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
   ctx.stroke();
+
+  // A letter above each flagged beat saying what the model called it.
+  ctx.font = "500 11px system-ui, sans-serif";
+  ctx.textAlign = "center";
+  for (const beat of current.beats) {
+    if (beat.at < startSample || beat.at >= end) continue;
+    const kind = verdict(beat);
+    if (kind === "normal") continue;
+    const label = kind === "missed" ? index.classes[beat.true]
+      : index.classes[beat.said];
+    ctx.fillStyle = COLOR[kind];
+    ctx.fillText(label, xAt(beat.at), 17);
+  }
+}
+
+/* ---------- the summary, written from the real numbers ---------- */
+
+function describe(info) {
+  const rate = info.abnormalTrue / info.total;
+  const perMinute = info.abnormalTrue / info.minutes;
+
+  // Where in the recording do the abnormal beats fall? Comparing the first
+  // half against the second is enough to tell "steady" from "worsening".
+  const half = info.samples / 2;
+  const abnormal = info.beats.filter((b) => b.true !== 0);
+  const late = abnormal.filter((b) => b.at >= half).length;
+  const share = abnormal.length ? late / abnormal.length : 0.5;
+
+  let howMany;
+  if (rate < 0.005) {
+    howMany = "almost entirely steady, with only a stray abnormal beat";
+  } else if (rate < 0.05) {
+    howMany = `mostly steady — about ${Math.round(rate * 1000) / 10}% of beats are abnormal`;
+  } else if (rate < 0.2) {
+    howMany = `frequent abnormal beats, roughly 1 in every ${Math.round(1 / rate)}`;
+  } else {
+    howMany = `heavily irregular — about ${Math.round(rate * 100)}% of all beats are abnormal`;
+  }
+
+  let whereAbout;
+  if (abnormal.length < 10) {
+    whereAbout = "";
+  } else if (share > 0.68) {
+    whereAbout = " They cluster toward the end of the recording rather than spreading evenly across it.";
+  } else if (share < 0.32) {
+    whereAbout = " They are concentrated early on and settle down as the recording goes.";
+  } else {
+    whereAbout = " They are spread fairly evenly across the half hour.";
+  }
+
+  const perMin = abnormal.length >= 10
+    ? ` That works out to about ${Math.round(perMinute)} a minute.` : "";
+
+  return `Over ${info.minutes} minutes this recording is ${howMany}.${whereAbout}${perMin}`;
+}
+
+function describeModel(info) {
+  const recall = info.abnormalTrue ? info.caught / info.abnormalTrue : 1;
+  const parts = [
+    `The model found ${info.caught.toLocaleString()} of the ` +
+    `${info.abnormalTrue.toLocaleString()} beats the cardiologists marked abnormal`,
+  ];
+  if (info.missed) parts.push(`missed ${info.missed.toLocaleString()}`);
+  if (info.falseAlarm) {
+    parts.push(`and flagged ${info.falseAlarm.toLocaleString()} healthy beats it should have left alone`);
+  }
+  let text = parts.join(", ") + ".";
+  if (recall < 0.5) {
+    text += " This is one of the patients it handles badly.";
+  } else if (recall > 0.95 && info.falseAlarm < info.caught * 0.3) {
+    text += " A strong result on this patient.";
+  }
+  return text;
 }
 
 /* ---------- wiring ---------- */
 
-function clockAt(beatIndex) {
-  const seconds = Math.round((beatIndex / beats.length) * RECORDING_SECONDS);
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${String(s).padStart(2, "0")}`;
+function clockAt(sample) {
+  const seconds = Math.round(sample / current.hz);
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
-function startBeatFromSlider() {
-  const fraction = Number($("offset").value) / 100;
-  return Math.floor(fraction * Math.max(0, beats.length - BEATS_ON_SCREEN));
+function startFromSlider() {
+  const fraction = Number($("offset").value) / 1000;
+  return Math.floor(fraction * Math.max(0, wave.length - windowSize()));
 }
 
 function refreshTrace() {
-  const start = startBeatFromSlider();
+  const start = startFromSlider();
   draw(start);
   $("offset-out").textContent = clockAt(start);
 }
 
-function analyze() {
-  const id = $("record-select").value;
-  if (!id) {
-    $("picker-hint").textContent = "Pick a recording first.";
-    $("picker-hint").style.color = "var(--red-dim)";
+async function analyze() {
+  const name = $("record-select").value;
+  const hint = $("picker-hint");
+  if (!name) {
+    hint.textContent = "Pick a recording first.";
+    hint.style.color = "var(--red-dim)";
     return;
   }
 
-  $("picker-hint").textContent = "Demo data for now — the real model isn't wired up yet.";
-  $("picker-hint").style.color = "";
+  hint.textContent = "Analyzing…";
+  hint.style.color = "";
+  await loadRecord(name);
 
-  current = RECORDS[id];
-  beats = makeBeats(current, Number(id) * 7919);
+  hint.textContent = `Record ${name}: ${current.minutes} minutes, ` +
+    `${current.total.toLocaleString()} beats, ${current.hz} Hz. The model and the ` +
+    `cardiologists agree on ${(current.agreement * 100).toFixed(1)}% of them.`;
 
-  const abnormal = beats.filter((b) => b.abnormal).length;
-
-  $("record-badge").textContent = `record ${id}.dat`;
+  $("record-badge").textContent = `record ${name}.dat`;
   $("stat-total").textContent = current.total.toLocaleString();
-  $("stat-abnormal").textContent = abnormal.toLocaleString();
-  $("stat-confidence").textContent = `${current.confidence}%`;
-  $("summary").textContent = current.summary;
+  $("stat-flagged").textContent = current.abnormalSaid.toLocaleString();
+  $("stat-truth").textContent = current.abnormalTrue.toLocaleString();
+  $("stat-caught").textContent = current.abnormalTrue
+    ? `${Math.round((current.caught / current.abnormalTrue) * 100)}%` : "—";
+
+  $("summary").textContent = describe(current);
+  $("summary-note").textContent = describeModel(current);
 
   $("offset").value = 0;
   ["trace-panel", "stats", "summary-panel"].forEach((s) => ($(s).hidden = false));
@@ -165,5 +251,11 @@ function analyze() {
 }
 
 $("analyze-btn").addEventListener("click", analyze);
-$("offset").addEventListener("input", refreshTrace);
-window.addEventListener("resize", () => { if (beats.length) refreshTrace(); });
+$("offset").addEventListener("input", () => { if (wave) refreshTrace(); });
+window.addEventListener("resize", () => { if (wave) refreshTrace(); });
+
+loadIndex().catch(() => {
+  $("picker-hint").textContent =
+    "Couldn't load the data. This page needs to be served over http, not opened as a file.";
+  $("picker-hint").style.color = "var(--red-dim)";
+});

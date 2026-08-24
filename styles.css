@@ -90,16 +90,24 @@ main {
   color: var(--text-dim);
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 14px;
+  flex-wrap: wrap;
 }
+
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
 
 .dot {
   width: 10px;
   height: 10px;
   border-radius: 3px;
-  background: rgba(224, 49, 49, 0.45);
   display: inline-block;
 }
+
+/* Three outcomes worth telling apart: the model was right, it slept through
+   an abnormal beat, or it panicked over a healthy one. */
+.dot.caught { background: rgba(224, 49, 49, 0.55); }
+.dot.missed { background: rgba(245, 159, 0, 0.55); }
+.dot.false  { background: rgba(76, 110, 245, 0.55); }
 
 /* ---------- controls ---------- */
 
@@ -167,7 +175,7 @@ canvas {
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 16px;
 }
 
@@ -193,6 +201,14 @@ canvas {
 /* ---------- summary ---------- */
 
 .summary { margin: 0; font-size: 15px; }
+
+.summary-note {
+  margin: 12px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 14px;
+  color: var(--text-dim);
+}
 
 .disclaimer {
   margin: 8px 0 0;
