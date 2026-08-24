@@ -12,3 +12,6 @@ __pycache__/
 # The dataset is 69 MB and rebuildable; the trained model is 196 KB and ships.
 beats.npz
 record_*.png
+
+.vercel
+.env*

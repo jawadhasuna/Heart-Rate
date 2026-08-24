@@ -217,5 +217,19 @@ canvas {
   text-align: center;
 }
 
+/* The MIT-BIH data is free to republish, but only with credit. */
+.credit {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--text-dim);
+  text-align: center;
+  max-width: 620px;
+  margin-inline: auto;
+}
+
+.credit a { color: var(--red-dim); text-decoration: none; }
+.credit a:hover { text-decoration: underline; }
+
 /* `hidden` must win over the display rules above. */
 [hidden] { display: none !important; }
